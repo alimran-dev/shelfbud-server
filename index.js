@@ -46,6 +46,15 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/bookCount", async (req, res) => {
+      const email = req.query.email;
+      console.log(email);
+      const query = { email: email };
+      const count = (await bookCollection.countDocuments(query)).toString();
+      const result = await { count };
+      res.send(result);
+    });
+
     app.post("/books", async (req, res) => {
       const book = req.body;
       console.log(book);
