@@ -45,7 +45,13 @@ async function run() {
         .toArray();
       res.send(result);
     });
-
+    // user based books get
+    app.get("/myBooks", async (req, res) => {
+      const email = req.query.email;
+      const query = { email };
+      const result = await bookCollection.find(query).toArray();
+      res.send(result);
+    })
     app.get("/bookCount", async (req, res) => {
       const email = req.query.email;
       console.log(email);
@@ -63,6 +69,29 @@ async function run() {
       res.send(result);
     })
 
+    // books update put api
+    app.put("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const product = req.body;
+      const {book_name,img,username,email,price,area,description,profile_img,} = product || {};
+      console.log(product);
+      const updateProduct = {
+        $set: {
+          book_name,
+          img,
+          username,
+          email,
+          price,
+          area,
+          description,
+          profile_img,
+        }
+      };
+      const options = { upsert: true };
+      const result = await bookCollection.updateOne(filter, updateProduct, options);
+      res.send(result);
+    })
     app.post("/books", async (req, res) => {
       const book = req.body;
       console.log(book);
