@@ -54,6 +54,14 @@ async function run() {
       const result = await { count };
       res.send(result);
     });
+    app.get("/sellerOrderCount", async (req, res) => {
+      const email = req.query.email;
+      console.log(email);
+      const query = { provider_email: email };
+      const count = (await orderCollection.countDocuments(query)).toString();
+      const result = await { count };
+      res.send(result);
+    })
 
     app.post("/books", async (req, res) => {
       const book = req.body;
