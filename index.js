@@ -113,6 +113,12 @@ async function run() {
     });
 
     // Order API
+    app.get("/bookings", async (req, res) => {
+      const customer_email = req.query.email;
+      const query = { customer_email };
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
+    })
     app.post("/orders", async (req, res) => {
       const order = req.body;
       console.log(order);
