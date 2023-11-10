@@ -51,7 +51,7 @@ async function run() {
       const query = { email };
       const result = await bookCollection.find(query).toArray();
       res.send(result);
-    })
+    });
     app.get("/bookCount", async (req, res) => {
       const email = req.query.email;
       console.log(email);
@@ -67,14 +67,23 @@ async function run() {
       const count = (await orderCollection.countDocuments(query)).toString();
       const result = await { count };
       res.send(result);
-    })
+    });
 
     // books update put api
     app.put("/books/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const product = req.body;
-      const {book_name,img,username,email,price,area,description,profile_img,} = product || {};
+      const {
+        book_name,
+        img,
+        username,
+        email,
+        price,
+        area,
+        description,
+        profile_img,
+      } = product || {};
       console.log(product);
       const updateProduct = {
         $set: {
@@ -86,12 +95,16 @@ async function run() {
           area,
           description,
           profile_img,
-        }
+        },
       };
       const options = { upsert: true };
-      const result = await bookCollection.updateOne(filter, updateProduct, options);
+      const result = await bookCollection.updateOne(
+        filter,
+        updateProduct,
+        options
+      );
       res.send(result);
-    })
+    });
     app.post("/books", async (req, res) => {
       const book = req.body;
       console.log(book);
@@ -104,6 +117,14 @@ async function run() {
       const order = req.body;
       console.log(order);
       const result = await orderCollection.insertOne(order);
+      res.send(result);
+    });
+
+    // book delete api
+    app.delete("/deleteBook/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await bookCollection.deleteOne(filter);
       res.send(result);
     });
     await client.db("admin").command({ ping: 1 });
