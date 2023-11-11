@@ -6,7 +6,12 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -118,11 +123,25 @@ async function run() {
       const query = { customer_email };
       const result = await orderCollection.find(query).toArray();
       res.send(result);
-    })
+    });
+    app.get("/myOrders", async (req, res) => {
+      const provider_email = req.query.email;
+      const query = { provider_email };
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
+    });
     app.post("/orders", async (req, res) => {
       const order = req.body;
       console.log(order);
       const result = await orderCollection.insertOne(order);
+      res.send(result);
+    });
+    app.patch("/orderStatus", async (req, res) => {
+      const id = req.query.id;
+      const { status } = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updateStatus = { $set: { status } };
+      const result = await orderCollection.updateOne(filter, updateStatus);
       res.send(result);
     });
 
