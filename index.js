@@ -8,7 +8,7 @@ const port = process.env.PORT || 5000;
 // middlewares
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://shelfbud-air.web.app"],
     credentials: true,
   })
 );
@@ -32,6 +32,7 @@ const client = new MongoClient(uri, {
 const database = client.db("ShelfBud");
 const bookCollection = database.collection("books");
 const orderCollection = database.collection("orders");
+const offerCollection = database.collection("offers");
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -71,6 +72,12 @@ async function run() {
       const query = { provider_email: email };
       const count = (await orderCollection.countDocuments(query)).toString();
       const result = await { count };
+      res.send(result);
+    });
+    app.get("/moreFromSeller", async (req, res) => {
+      const email = req.query.email;
+      console.log({ email });
+      const result = await bookCollection.find({ email }).toArray();
       res.send(result);
     });
 
@@ -150,6 +157,11 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await bookCollection.deleteOne(filter);
+      res.send(result);
+    });
+    // offers get api
+    app.get("/offers", async (req, res) => {
+      const result = await offerCollection.find().toArray();
       res.send(result);
     });
     await client.db("admin").command({ ping: 1 });
