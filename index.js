@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
@@ -13,6 +15,23 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
+
+// custom middleware
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "not authorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      console.log(err);
+      return res.status(401).send({ message: "unauthorized" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 app.get("/", (req, res) => {
   res.send("shelfbud server is running...");
@@ -39,12 +58,35 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
 
+    // auth related API
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out: ", user);
+      res
+        .clearCookie("token", { maxAge: 0,secure: true, sameSite: "none" })
+        .send({ success: true });
+    });
     // books API
     app.get("/books", async (req, res) => {
       const result = await bookCollection.find().toArray();
       res.send(result);
     });
-    app.get("/services/:id", async (req, res) => {
+    app.get("/services/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const result = await bookCollection
         .find({ _id: new ObjectId(id) })
@@ -52,8 +94,11 @@ async function run() {
       res.send(result);
     });
     // user based books get
-    app.get("/myBooks", async (req, res) => {
+    app.get("/myBooks",verifyToken, async (req, res) => {
       const email = req.query.email;
+      if (req.user.email !== email) {
+        return res.status(401).send({ message: 'unauthorized' });
+      }
       const query = { email };
       const result = await bookCollection.find(query).toArray();
       res.send(result);
@@ -82,7 +127,7 @@ async function run() {
     });
 
     // books update put api
-    app.put("/books/:id", async (req, res) => {
+    app.put("/books/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const product = req.body;
@@ -97,6 +142,9 @@ async function run() {
         profile_img,
       } = product || {};
       console.log(product);
+      if (req.user.email !== email) {
+        return res.status(401).send({ message: "unauthorized" });
+      }
       const updateProduct = {
         $set: {
           book_name,
@@ -117,7 +165,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.post("/books", async (req, res) => {
+    app.post("/books",verifyToken, async (req, res) => {
       const book = req.body;
       console.log(book);
       const result = await bookCollection.insertOne(book);
@@ -125,21 +173,30 @@ async function run() {
     });
 
     // Order API
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings",verifyToken, async (req, res) => {
       const customer_email = req.query.email;
+      if (req.user.email !== customer_email) {
+        return res.status(401).send({ message: 'unauthorized' });
+      }
       const query = { customer_email };
       const result = await orderCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/myOrders", async (req, res) => {
+    app.get("/myOrders",verifyToken, async (req, res) => {
       const provider_email = req.query.email;
+      if (req.user.email !== provider_email) {
+        return res.status(401).send({ message: 'unauthorized' });
+      }
       const query = { provider_email };
       const result = await orderCollection.find(query).toArray();
       res.send(result);
     });
-    app.post("/orders", async (req, res) => {
+    app.post("/orders",verifyToken, async (req, res) => {
       const order = req.body;
       console.log(order);
+      if (req.user?.email !== order?.customer_email) {
+        return res.status(401).send({ message: 'unauthorized' });
+      }
       const result = await orderCollection.insertOne(order);
       res.send(result);
     });
@@ -153,7 +210,7 @@ async function run() {
     });
 
     // book delete api
-    app.delete("/deleteBook/:id", async (req, res) => {
+    app.delete("/deleteBook/:id",verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await bookCollection.deleteOne(filter);
